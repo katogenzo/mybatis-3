@@ -42,6 +42,9 @@ import org.apache.ibatis.session.LocalCacheScope;
 import org.apache.ibatis.transaction.TransactionFactory;
 import org.apache.ibatis.type.JdbcType;
 
+/**
+ * @author Clinton Begin
+ */
 public class XMLConfigBuilder extends BaseBuilder {
 
   private boolean parsed;
@@ -241,6 +244,7 @@ public class XMLConfigBuilder extends BaseBuilder {
     DatabaseIdProvider databaseIdProvider = null;
     if (context != null) {
       String type = context.getStringAttribute("type");
+      if ("VENDOR".equals(type)) type = "DB_VENDOR"; // awful patch to keep backward compatibility
       Properties properties = context.getChildrenAsProperties();
       databaseIdProvider = (DatabaseIdProvider) resolveClass(type).newInstance();
       databaseIdProvider.setProperties(properties);

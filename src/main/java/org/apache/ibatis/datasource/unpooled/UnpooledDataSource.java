@@ -31,6 +31,10 @@ import javax.sql.DataSource;
 
 import org.apache.ibatis.io.Resources;
 
+/**
+ * @author Clinton Begin
+ * @author Eduardo Macarron
+ */
 public class UnpooledDataSource implements DataSource {
   
   private ClassLoader driverClassLoader;
@@ -173,7 +177,10 @@ public class UnpooledDataSource implements DataSource {
   }
 
   private Connection doGetConnection(String username, String password) throws SQLException {
-    Properties props = new Properties(driverProperties);
+    Properties props = new Properties();
+    if (driverProperties != null) {
+      props.putAll(driverProperties);
+    }
     if (username != null) {
       props.setProperty("user", username);
     }
@@ -250,7 +257,6 @@ public class UnpooledDataSource implements DataSource {
       return this.driver.jdbcCompliant();
     }
 
-    @SuppressWarnings("unused")
     public Logger getParentLogger() {
       return Logger.getLogger(Logger.GLOBAL_LOGGER_NAME);
     }

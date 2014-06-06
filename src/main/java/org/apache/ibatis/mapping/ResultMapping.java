@@ -1,5 +1,5 @@
 /*
- *    Copyright 2009-2013 the original author or authors.
+ *    Copyright 2009-2014 the original author or authors.
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -25,6 +25,9 @@ import org.apache.ibatis.type.JdbcType;
 import org.apache.ibatis.type.TypeHandler;
 import org.apache.ibatis.type.TypeHandlerRegistry;
 
+/**
+ * @author Clinton Begin
+ */
 public class ResultMapping {
 
   private Configuration configuration;
@@ -41,6 +44,7 @@ public class ResultMapping {
   private List<ResultMapping> composites;
   private String resultSet;
   private String foreignColumn;
+  private boolean lazy;
 
   private ResultMapping() {
   }
@@ -49,21 +53,15 @@ public class ResultMapping {
     private ResultMapping resultMapping = new ResultMapping();
 
     public Builder(Configuration configuration, String property, String column, TypeHandler<?> typeHandler) {
-      resultMapping.configuration = configuration;
-      resultMapping.property = property;
+      this(configuration, property);
       resultMapping.column = column;
       resultMapping.typeHandler = typeHandler;
-      resultMapping.flags = new ArrayList<ResultFlag>();
-      resultMapping.composites = new ArrayList<ResultMapping>();
     }
 
     public Builder(Configuration configuration, String property, String column, Class<?> javaType) {
-      resultMapping.configuration = configuration;
-      resultMapping.property = property;
+      this(configuration, property);
       resultMapping.column = column;
       resultMapping.javaType = javaType;
-      resultMapping.flags = new ArrayList<ResultFlag>();
-      resultMapping.composites = new ArrayList<ResultMapping>();
     }
 
     public Builder(Configuration configuration, String property) {
@@ -71,6 +69,7 @@ public class ResultMapping {
       resultMapping.property = property;
       resultMapping.flags = new ArrayList<ResultFlag>();
       resultMapping.composites = new ArrayList<ResultMapping>();
+      resultMapping.lazy = configuration.isLazyLoadingEnabled();
     }
 
     public Builder javaType(Class<?> javaType) {
@@ -128,6 +127,11 @@ public class ResultMapping {
       return this;
     }
 
+    public Builder lazy(boolean lazy) {
+      resultMapping.lazy = lazy;
+      return this;
+    }
+    
     public ResultMapping build() {
       // lock down collections
       resultMapping.flags = Collections.unmodifiableList(resultMapping.flags);
@@ -140,15 +144,15 @@ public class ResultMapping {
     private void validate() {
       // Issue #697: cannot define both nestedQueryId and nestedResultMapId
       if (resultMapping.nestedQueryId != null && resultMapping.nestedResultMapId != null) {
-        throw new IllegalStateException("Cannot define both nestedQueryId and nestedResultMapId in mapping " + resultMapping.property);
+        throw new IllegalStateException("Cannot define both nestedQueryId and nestedResultMapId in property " + resultMapping.property);
       }
       // Issue #5: there should be no mappings without typehandler
       if (resultMapping.nestedQueryId == null && resultMapping.nestedResultMapId == null && resultMapping.typeHandler == null) {
-        throw new IllegalStateException("No typehandler found for mapping " + resultMapping.property);
+        throw new IllegalStateException("No typehandler found for property " + resultMapping.property);
       }
       // Issue #4 and GH #39: column is optional only in nested resultmaps but not in the rest
       if (resultMapping.nestedResultMapId == null && resultMapping.column == null && resultMapping.composites.size() == 0) {
-        throw new IllegalStateException("Missing column attribute for nested select in mapping " + resultMapping.property);
+        throw new IllegalStateException("Mapping is missing column attribute for property " + resultMapping.property);
       }
       if (resultMapping.getResultSet() != null) {
         int numColums = 0;
@@ -239,6 +243,14 @@ public class ResultMapping {
     this.foreignColumn = foreignColumn;
   }
 
+  public boolean isLazy() {
+    return lazy;
+  }
+
+  public void setLazy(boolean lazy) {
+    this.lazy = lazy;
+  }
+  
   @Override
   public boolean equals(Object o) {
     if (this == o) {
@@ -267,4 +279,5 @@ public class ResultMapping {
       return 0;
     }
   }
+
 }

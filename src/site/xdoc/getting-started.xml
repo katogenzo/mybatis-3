@@ -30,7 +30,7 @@
     
     <subsection name="Installation">
       <p>
-        To use the MyBatis you just need to include the
+        To use MyBatis you just need to include the
         <code>
           mybatis-x.x.x.jar
         </code>
@@ -53,7 +53,7 @@
         SqlSessionFactory. A SqlSessionFactory instance can be acquired by
         using the SqlSessionFactoryBuilder. SqlSessionFactoryBuilder can
         build a SqlSessionFactory instance from an XML configuration file,
-        of from a custom prepared instance of the Configuration class.
+        or from a custom prepared instance of the Configuration class.
       </p>
       <p>
         Building a SqlSessionFactory instance from an XML file is very
@@ -161,7 +161,7 @@ SqlSessionFactory sqlSessionFactory = new SqlSessionFactoryBuilder().build(confi
         SQL commands against
         the database. You can execute mapped SQL statements directly against
         the SqlSession instance. For
-        exmaple:
+        example:
       </p>
       <source><![CDATA[SqlSession session = sqlSessionFactory.openSession();
 try {
@@ -216,7 +216,7 @@ try {
   PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
   "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="org.mybatis.example.BlogMapper">
-  <select id="selectBlog" parameterType="int" resultType="Blog">
+  <select id="selectBlog" resultType="Blog">
     select * from Blog where id = #{id}
   </select>
 </mapper>]]></source>
@@ -316,6 +316,19 @@ public interface BlogMapper {
         classes we've discussed so far. Using them incorrectly can cause
         severe concurrency problems.
       </p>
+      
+      <hr/>
+      <p><span class="label important">NOTE</span>
+        <strong>Object lifecycle and Dependency Injection Frameworks</strong>
+      </p>
+      <p>
+        Dependency Injection frameworks can create thread safe, transactional SqlSessions and mappers 
+        and inject them directly into your beans so you can just forget about their lifecycle. 
+        You may want to have a look at MyBatis-Spring or
+        MyBatis-Guice sub-projects to know more about using MyBatis with DI frameworks.
+      </p>
+      <hr/>
+      
       <h4>SqlSessionFactoryBuilder</h4>
         <p>
           This class can be instantiated, used and thrown away. There is no need
@@ -345,7 +358,7 @@ public interface BlogMapper {
           the best scope is request or method scope. Never keep references to
           a SqlSession instance in a static field or even an instance field
           of a class. Never keep references to a SqlSession in any sort of
-          managed scope, such as HttpSession of of the Servlet framework. If
+          managed scope, such as HttpSession of the Servlet framework. If
           you're using a web framework of any sort, consider the SqlSession
           to follow a similar scope to that of an HTTP request. In other
           words, upon receiving an HTTP request, you can open a SqlSession,
@@ -388,17 +401,6 @@ try {
 }
 ]]></source>
 
-      <hr/>
-      <p><span class="label important">NOTE</span>
-        <strong>Object lifecycle and Dependency Injection Frameworks</strong>
-      </p>
-      <p>
-        Dependency Injection frameworks can create thread safe, transactional SqlSessions and mappers 
-        and inject them directly into your beans so you can just forget about their lifecycle. 
-        You may want to have a look at MyBatis-Spring or
-        MyBatis-Guice sub-projects to know more about using MyBatis with DI frameworks.
-      </p>
-      <hr/>
       </subsection>
     </section>
   </body>

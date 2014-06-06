@@ -153,13 +153,14 @@ SqlSessionFactory factory = sqlSessionFactoryBuilder.build(reader, environment, 
                 lazyLoadingEnabled
               </td>
               <td>
-                全局启用或禁用延迟加载。当禁用时, 所有关联对象都会即时加载。 
+                全局启用或禁用延迟加载。当禁用时, 所有关联对象都会即时加载。
+                This value can be superseded for an specific relation by using the <code>fetchType</code> attribute on it. 
               </td>
               <td>
                 true | false
               </td>
               <td>
-                true
+                false
               </td>
             </tr>
             <tr>
@@ -772,7 +773,7 @@ public class Author {
                 <code>ByteTypeHandler</code>
               </td>
               <td>
-                <code>java.lang.Byte</code>, byte
+                <code>java.lang.Byte</code>, <code>byte</code>
               </td>
               <td>
                 任何兼容的数字或字节类型
@@ -816,7 +817,7 @@ public class Author {
                 <code>FloatTypeHandler</code>
               </td>
               <td>
-                <code>java.lang.Float</code>, float
+                <code>java.lang.Float</code>, <code>float</code>
               </td>
               <td>
                 任何兼容的数字或单精度浮点型
@@ -1016,10 +1017,10 @@ public class Author {
         <p>
           你可以重写类型处理器或创建你自己的类型处理器来处理不支持的或非标准的类型。
           //TODO translation needed
-          To do so, simply extend
-          the
-          <code>org.apache.ibatis.type.BaseTypeHandler</code> class and optionally map your new
-          <code>TypeHandler</code> class to a JDBC type. 例如:
+          
+          To do so, implement the interface <code>org.apache.ibatis.type.TypeHandler</code>
+          or extend the convenience class <code>org.apache.ibatis.type.BaseTypeHandler</code> 
+          and optionally map it to a JDBC type. 例如:
         </p>
         <source><![CDATA[// ExampleTypeHandler.java
 @MappedJdbcTypes(JdbcType.VARCHAR)
@@ -1079,7 +1080,7 @@ public class ExampleTypeHandler extends BaseTypeHandler<String> {
         <p>Associated JDBC type can be specified by two means:</p>
         <ul>
           <li>
-           Adding a <code>jdbcType</code> attribute to the typeHandler element (for example: <code>jdbcType=VARCHAR</code>).
+           Adding a <code>jdbcType</code> attribute to the typeHandler element (for example: <code>jdbcType="VARCHAR"</code>).
           </li>
           <li>Adding a <code>@MappedJdbcTypes</code> annotation to your TypeHandler class specifying 
           the list of JDBC types to associate it with. This annotation will be ignored if 
@@ -1181,7 +1182,7 @@ public class GenericTypeHandler<E extends MyObject> extends BaseTypeHandler<E> {
 	<select id="getUser" resultMap="usermap">
 		select * from users
 	</select>
-	<insert id="insert" parameterType="org.apache.ibatis.submitted.rounding.User">
+	<insert id="insert">
 	    insert into users (id, name, funkyNumber, roundingMode) values (
 	    	#{id}, #{name}, #{funkyNumber}, #{roundingMode}
 	    )
@@ -1196,7 +1197,7 @@ public class GenericTypeHandler<E extends MyObject> extends BaseTypeHandler<E> {
 	<select id="getUser2" resultMap="usermap2">
 		select * from users2
 	</select>
-	<insert id="insert2" parameterType="org.apache.ibatis.submitted.rounding.User">
+	<insert id="insert2">
 	    insert into users2 (id, name, funkyNumber, roundingMode) values (
 	    	#{id}, #{name}, #{funkyNumber}, #{roundingMode, typeHandler=org.apache.ibatis.type.EnumTypeHandler}
 	    )
@@ -1229,7 +1230,10 @@ public class ExampleObjectFactory extends DefaultObjectFactory {
   public void setProperties(Properties properties) {
     super.setProperties(properties);
   }
-}]]></source>
+  public <T> boolean isCollection(Class<T> type) {
+    return Collection.class.isAssignableFrom(type);
+  }}
+]]></source>
 
         <source><![CDATA[<!-- mybatis-config.xml -->
 <objectFactory type="org.mybatis.example.ExampleObjectFactory">
@@ -1568,6 +1572,42 @@ data_source 属性将会直接以 initialContext 为背景再次寻找。
 在初始化之后,这就会以值“UTF8”向初始上下文的构造方法传递名为“encoding”
 的属性。
         </p>
+        
+		<p>
+		  You can plug any 3rd party DataSource by implementing the interface <code>org.apache.ibatis.datasource.DataSourceFactory</code>:
+		</p>
+
+        <source><![CDATA[public interface DataSourceFactory {
+  void setProperties(Properties props);
+  DataSource getDataSource();
+}]]></source>
+
+        <p>
+		  <code>org.apache.ibatis.datasource.unpooled.UnpooledDataSourceFactory</code> can be used as super class
+		  class to build new datasource adapters. For example this is the code needed to plug C3P0:  
+		</p>
+
+        <source><![CDATA[import org.apache.ibatis.datasource.unpooled.UnpooledDataSourceFactory;
+import com.mchange.v2.c3p0.ComboPooledDataSource;
+        
+public class C3P0DataSourceFactory extends UnpooledDataSourceFactory {
+
+  public C3P0DataSourceFactory() {
+    this.dataSource = new ComboPooledDataSource();
+  }
+}]]></source>
+
+        <p>To set it up, add a property for each setter method you want MyBatis to call. 
+        Below depicts a sample configuration which connects to a PostgreSQL database:</p>        
+
+        <source><![CDATA[<dataSource type="org.myproject.C3P0DataSourceFactory">
+  <property name="driver" value="org.postgresql.Driver"/>
+  <property name="url" value="jdbc:postgresql:mydb"/>
+  <property name="username" value="postgres"/>
+  <property name="password" value="root"/>
+</dataSource>
+]]></source>
+        
       </subsection>
       
       <subsection name="databaseIdProvider">
@@ -1581,24 +1621,24 @@ data_source 属性将会直接以 initialContext 为背景再次寻找。
           to mybatis-config.xml file as follows:
         </p>
         
-        <source><![CDATA[<databaseIdProvider type="VENDOR" />
+        <source><![CDATA[<databaseIdProvider type="DB_VENDOR" />
 ]]></source>
 
 		<p> 
-		  The VENDOR implementation databaseIdProvider sets as a databaseId the String returned by 
+		  The DB_VENDOR implementation databaseIdProvider sets as a databaseId the String returned by 
 		  <code>DatabaseMetaData#getDatabaseProductName()</code>. 
 		  As usually that string is too long and also, different versions of the same product return different values, 
 		  so you may want to translate it to a shorter one by adding properties like follows:
 		</p>
 		
-        <source><![CDATA[<databaseIdProvider type="VENDOR">
+        <source><![CDATA[<databaseIdProvider type="DB_VENDOR">
   <property name="SQL Server" value="sqlserver"/>
   <property name="DB2" value="db2"/>        
   <property name="Oracle" value="oracle" />
 </databaseIdProvider>]]></source>
 
 		<p> 
-		  When properties are provided, the VENDOR databaseIdProvider will search the property value corresponding to the 
+		  When properties are provided, the DB_VENDOR databaseIdProvider will search the property value corresponding to the 
 		  first key found in the returned database product name or "null" if there is not a matching property. 
 		  In this case, if <code>getDatabaseProductName()</code> returns "Oracle (DataDirect)" the databaseId will be set to "oracle".  
 		</p>
@@ -1609,9 +1649,7 @@ data_source 属性将会直接以 initialContext 为背景再次寻找。
 		</p>
 
         <source><![CDATA[public interface DatabaseIdProvider {
-
   void setProperties(Properties p);
-  
   String getDatabaseId(DataSource dataSource) throws SQLException;
 }]]></source>
 

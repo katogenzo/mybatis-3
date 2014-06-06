@@ -352,7 +352,7 @@ TEMENT,PREPARED 或 CALLABLE 的一种。这会让 MyBatis
             <tr>
               <td><code>useGeneratedKeys</code></td>
               <td>
-( 仅 对 insert 有 用 ) 这 会 告 诉 MyBatis 使 用 JDBC 的
+( 仅 对 insert, update 有 用 ) 这 会 告 诉 MyBatis 使 用 JDBC 的
 getGeneratedKeys 方法来取出由数据(比如:像 MySQL 和 SQL
 Server 这样的数据库管理系统的自动递增字段)内部生成的主键。
 默认值:false。
@@ -361,23 +361,23 @@ Server 这样的数据库管理系统的自动递增字段)内部生成的主键
             <tr>
               <td><code>keyProperty</code></td>
               <td>
-(仅对 insert 有用)
+(仅对 insert, update 有用)
 标记一个属性,
 MyBatis 会通过 getGeneratedKeys
 或者通过 insert 语句的 selectKey 子元素设置它的值。
 默认:
-不设置。
+不设置。 Can be a comma separated list of property names if multiple generated columns are expected.
               </td>
             </tr>
             <tr>
               <td><code>keyColumn</code></td>
               <td>
-(仅对 insert 有用)
+(仅对 insert, update 有用)
 标记一个属性,
 MyBatis 会通过 getGeneratedKeys
 或者通过 insert 语句的 selectKey 子元素设置它的值。
 默认:
-不设置。
+不设置。 Can be a comma separated list of columns names if multiple generated columns are expected.
               </td>
             </tr>
             <tr>
@@ -392,12 +392,12 @@ MyBatis 会通过 getGeneratedKeys
 
         <p>下面就是 insert,update 和 delete 语句的示例:</p>
 
-        <source><![CDATA[<insert id="insertAuthor" parameterType="domain.blog.Author">
+        <source><![CDATA[<insert id="insertAuthor">
   insert into Author (id,username,password,email,bio)
   values (#{id},#{username},#{password},#{email},#{bio})
 </insert>
 
-<update id="updateAuthor" parameterType="domain.blog.Author">
+<update id="updateAuthor">
   update Author set
     username = #{username},
     password = #{password},
@@ -406,7 +406,7 @@ MyBatis 会通过 getGeneratedKeys
   where id = #{id}
 </update>
 
-<delete id="deleteAuthor" parameterType="int">
+<delete id="deleteAuthor">
   delete from Author where id = #{id}
 </delete>]]></source>
 
@@ -421,7 +421,7 @@ MyBatis 会通过 getGeneratedKeys
 例如,如果上面的 Author 表已经对 id 使用了自动生成的列类型,那么语句可以修改为:
         </p>
 
-        <source><![CDATA[<insert id="insertAuthor" parameterType="domain.blog.Author" useGeneratedKeys="true"
+        <source><![CDATA[<insert id="insertAuthor" useGeneratedKeys="true"
     keyProperty="id">
   insert into Author (username,password,email,bio)
   values (#{username},#{password},#{email},#{bio})
@@ -437,7 +437,7 @@ MyBatis 有另外一种方法来处理数据库不支持自动生成类型,或�
 但是这展示了 MyBatis 处理问题的灵活性,因为它并不真的关心 ID 的生成):
         </p>
         
-        <source><![CDATA[<insert id="insertAuthor" parameterType="domain.blog.Author">
+        <source><![CDATA[<insert id="insertAuthor">
   <selectKey keyProperty="id" resultType="int" order="BEFORE">
     select CAST(RANDOM()*1000000 as INTEGER) a from SYSIBM.SYSDUMMY1
   </selectKey>
@@ -474,7 +474,14 @@ selectKey 元素描述如下:
             <tr>
               <td><code>keyProperty</code></td>
               <td>
-selectKey 语句结果应该被设置的目标属性。
+selectKey 语句结果应该被设置的目标属性。 Can be a comma separated list of property names if multiple generated columns are expected.
+              </td>
+            </tr>
+            <tr>
+              <td><code>keyColumn</code></td>
+              <td>The column name(s) in the returned result set that match the properties.
+                Can be a comma separated list of column names if multiple generated columns
+                are expected.
               </td>
             </tr>
             <tr>
@@ -519,7 +526,7 @@ CallableStatement 类型。
 这个 SQL 片段可以被包含在其他语句中,例如:
         </p>
 
-        <source><![CDATA[<select id="selectUsers" parameterType="int" resultType="hashmap">
+        <source><![CDATA[<select id="selectUsers" resultType="map">
   select <include refid="userColumns"/>
   from some_table
   where id = #{id}
@@ -534,7 +541,7 @@ CallableStatement 类型。
 元素。对于简单的做法,大概 90%的情况,是不用太多的,比如:
         </p>
 
-        <source><![CDATA[<select id="selectUsers" parameterType="int" resultType="User">
+        <source><![CDATA[<select id="selectUsers" resultType="User">
   select id, username, password
   from users
   where id = #{id}
@@ -550,7 +557,7 @@ CallableStatement 类型。
 的处理方式就会有一点不同。比如:
         </p>
 
-        <source><![CDATA[<insert id="insertUser" parameterType="User" >
+        <source><![CDATA[<insert id="insertUser" parameterType="User">
   insert into users (id, username, password)
   values (#{id}, #{username}, #{password})
 </insert>]]></source>
@@ -666,7 +673,7 @@ ResultMap 的设计就是简单语句不需要明确的结果映射,而很多复
 你已经看到简单映射语句的示例了,但没有明确的 resultMap。比如:
         </p>
 
-        <source><![CDATA[<select id="selectUsers" parameterType="int" resultType="hashmap">
+        <source><![CDATA[<select id="selectUsers" resultType="map">
   select id, username, hashedPassword
   from some_table
   where id = #{id}
@@ -713,7 +720,7 @@ public class User {
 这样的一个 JavaBean 可以被映射到结果集,就像映射到 HashMap 一样简单。
         </p>
 
-        <source><![CDATA[<select id="selectUsers" parameterType="int" resultType="com.someapp.model.User">
+        <source><![CDATA[<select id="selectUsers" resultType="com.someapp.model.User">
   select id, username, hashedPassword
   from some_table
   where id = #{id}
@@ -727,7 +734,7 @@ public class User {
 <typeAlias type="com.someapp.model.User" alias="User"/>
 
 <!-- In SQL Mapping XML file -->
-<select id="selectUsers" parameterType="int" resultType="User">
+<select id="selectUsers" resultType="User">
   select id, username, hashedPassword
   from some_table
   where id = #{id}
@@ -739,7 +746,7 @@ JavaBean 的属性上。如果列名没有精确匹配,你可以在列名上使�
 基本的 SQL 特性)来匹配标签。比如:
         </p>
 
-        <source><![CDATA[<select id="selectUsers" parameterType="int" resultType="User">
+        <source><![CDATA[<select id="selectUsers" resultType="User">
   select
     user_id             as "id",
     user_name           as "userName",
@@ -766,7 +773,7 @@ ResultMap 最优秀的地方你已经了解了很多了,但是你还没有真正
 引用它的语句使用 resultMap 属性就行了(注意我们去掉了 resultType 属性)。比如:
         </p>
 
-        <source><![CDATA[<select id="selectUsers" parameterType="int" resultMap="userResultMap">
+        <source><![CDATA[<select id="selectUsers" resultMap="userResultMap">
   select user_id, user_name, hashed_password
   from some_table
   where id = #{id}
@@ -790,7 +797,7 @@ MyBatis 提供处理这个问题的答案。
         </p>
 
         <source><![CDATA[<!-- Very Complex Statement -->
-<select id="selectBlogDetails" parameterType="int" resultMap="detailedBlogResultMap">
+<select id="selectBlogDetails" resultMap="detailedBlogResultMap">
   select
        B.id as blog_id,
        B.title as blog_title,
@@ -1005,7 +1012,7 @@ property
             <tr>
               <td><code>javaType</code></td>
               <td>
-一个 Java 类的完全限定名,或一个类型别名(参加上面内建类型别名
+一个 Java 类的完全限定名,或一个类型别名(参考上面内建类型别名
 的列表)
 。如果你映射到一个 JavaBean,MyBatis 通常可以断定类型。
 然而,如果你映射到的是 HashMap,那么你应该明确地指定 javaType
@@ -1145,7 +1152,7 @@ resultSet.getString(columnName)方法的字符串是相同的。
             <tr>
               <td><code>javaType</code></td>
               <td>
-一个 Java 类的完全限定名,或一个类型别名(参加上面内建类型别名的列表)。
+一个 Java 类的完全限定名,或一个类型别名(参考上面内建类型别名的列表)。
 如果你映射到一个 JavaBean,MyBatis 通常可以断定类型。然而,如
 果你映射到的是 HashMap,那么你应该明确地指定 javaType 来保证所需的
 行为。
@@ -1252,7 +1259,7 @@ JavaBeans 的属性,
             <tr>
               <td><code>javaType</code></td>
               <td>
-一个 Java 类的完全限定名,或一个类型别名(参加上面内建类型别名的列
+一个 Java 类的完全限定名,或一个类型别名(参考上面内建类型别名的列
 表)
 。如果你映射到一个 JavaBean,MyBatis 通常可以断定类型。然而,如
 javaType
@@ -1317,6 +1324,13 @@ select
 prop1 和 prop2 以参数对象形式来设置给目标嵌套查询语句。
               </td>
             </tr>
+            <tr>
+              <td><code>fetchType</code></td>
+              <td>
+                Optional. Valid values are <code>lazy</code> and <code>eager</code>. If present, it supersedes
+                the global configuration parameter <code>lazyLoadingEnabled</code> for this mapping.
+              </td>
+            </tr>
           </tbody>
         </table>
 
@@ -1328,11 +1342,11 @@ prop1 和 prop2 以参数对象形式来设置给目标嵌套查询语句。
   <association property="author" column="author_id" javaType="Author" select="selectAuthor"/>
 </resultMap>
 
-<select id="selectBlog" parameterType="int" resultMap="blogResult">
+<select id="selectBlog" resultMap="blogResult">
   SELECT * FROM BLOG WHERE ID = #{id}
 </select>
 
-<select id="selectAuthor" parameterType="int" resultType="Author">
+<select id="selectAuthor" resultType="Author">
   SELECT * FROM AUTHOR WHERE ID = #{id}
 </select>]]></source>
 
@@ -1411,6 +1425,13 @@ resultMap
                 specified using a comma as a separator. Default value: unset.
               </td>
             </tr>            
+            <tr>
+              <td><code>autoMapping</code></td>
+              <td>If present, MyBatis will enable or disable auto-mapping when mapping the result to this property.
+                This attribute overrides the global autoMappingBehavior.
+                Note that it has no effect on an external resultMap, so it is pointless to use it with <code>select</code> or <code>resultMap</code> attribute. Default value: unset.
+              </td>
+            </tr>
           </tbody>
         </table>
 
@@ -1420,7 +1441,7 @@ resultMap
 来说明它如何工作。代替了执行一个分离的语句,我们联合博客表和作者表在一起,就像:
         </p>
 
-        <source><![CDATA[<select id="selectBlog" parameterType="int" resultMap="blogResult">
+        <source><![CDATA[<select id="selectBlog" resultMap="blogResult">
   select
     B.id            as blog_id,
     B.title         as blog_title,
@@ -1488,7 +1509,7 @@ resultMap
           The select statement would look like:
         </p>
 
-        <source><![CDATA[<select id="selectBlog" parameterType="int" resultMap="blogResult">
+        <source><![CDATA[<select id="selectBlog" resultMap="blogResult">
   select
     B.id            as blog_id,
     B.title         as blog_title,
@@ -1575,11 +1596,11 @@ resultMap
   <collection property="posts" javaType="ArrayList" column="id" ofType="Post" select="selectPostsForBlog"/>
 </resultMap>
 
-<select id="selectBlog" parameterType="int" resultMap="blogResult">
+<select id="selectBlog" resultMap="blogResult">
   SELECT * FROM BLOG WHERE ID = #{id}
 </select>
 
-<select id="selectPostsForBlog" parameterType="int" resultType="Blog">
+<select id="selectPostsForBlog" resultType="Blog">
   SELECT * FROM POST WHERE BLOG_ID = #{id}
 </select>]]></source>
 
@@ -1612,7 +1633,7 @@ javaType 属性是不需要的,因为 MyBatis 在很多情况下会为你算出�
 
         <p>First, let's look at the SQL:</p>
 
-        <source><![CDATA[<select id="selectBlog" parameterType="int" resultMap="blogResult">
+        <source><![CDATA[<select id="selectBlog" resultMap="blogResult">
   select
   B.id as blog_id,
   B.title as blog_title,
@@ -1783,31 +1804,31 @@ MyBatis 会从结果集中得到每条记录,
 
       </subsection>
       
-      <subsection name="Auto-mapping">
+      <subsection name="自动映射">
 
         <p>
-          As you have already seen in the previous sections, in simple cases MyBatis can auto-map the results for you 
-          and in others you will need to build a result map. 
-          But as you will see in this section you can also mix both strategies. 
-          Let's have a deeper look at how auto-mapping works. 
+           正如你在前面一节看到的，在简单的场景下，MyBatis可以替你自动映射查询结果。
+           如果遇到复杂的场景，你需要构建一个result map。
+           但是在本节你将看到，你也可以混合使用这两种策略。
+           让我们到深一点的层面上看看自动映射是怎样工作的。
         </p>
 
         <p>
-          When auto-mapping results MyBatis will get the column name and look for a property with the same name ignoring case. That means that if
-          a column named <i>ID</i> and property named <i>id</i> are found, MyBatis will set the <i>id</i> property with the <i>ID</i> column value. 
+           当自动映射查询结果时，MyBatis会获取sql返回的列名并在java类中查找相同名字的属性（忽略大小写）。
+           这意味着如果Mybatis发现了<i>ID</i>列和<i>id</i>属性，Mybatis会将<i>ID</i>的值赋给<i>id</i>。
         </p>
 
         <p>
-          Usually database columns are named using uppercase letters and underscores between words and java properties often follow the camelcase 
-          naming covention. To enable the auto-mapping between them set the setting <code>mapUnderscoreToCamelCase</code> to true.
+           通常数据库列使用大写单词命名，单词间用下划线分隔；而java属性一般遵循驼峰命名法。
+           为了在这两种命名方式之间启用自动映射，需要将 <code>mapUnderscoreToCamelCase</code>设置为true。
         </p>
         
         <p>
-          Auto-mapping works even when there is an specific result map. When this happens, for each result map, all columns that are present in the
-          ResultSet that have not a manual mapping will be auto-mapped, then manual mappings will be processed. 
-          In the following sample <i>id</i> and <i>userName</i> columns will be auto-mapped and <i>hashed_password</i> column will be mapped.</p>
-
-        <source><![CDATA[<select id="selectUsers" parameterType="int" resultType="User">
+           自动映射甚至在特定的result map下也能工作。在这种情况下，对于每一个result map,所有的ResultSet提供的列，
+           如果没有被手工映射，则将被自动映射。自动映射处理完毕后手工映射才会被处理。
+           在接下来的例子中， <i>id</i> 和 <i>userName</i>列将被自动映射， <i>hashed_password</i> 列将根据配置映射。
+        </p>
+        <source><![CDATA[<select id="selectUsers" resultType="User">
   select
     user_id             as "id",
     user_name           as "userName",
@@ -1842,7 +1863,7 @@ MyBatis 会从结果集中得到每条记录,
           hence this may result in undesired mappings. To understand the risk have a look at the following sample:
         </p>
         
-        <source><![CDATA[<select id="selectBlog" parameterType="int" resultMap="blogResult">
+        <source><![CDATA[<select id="selectBlog" resultMap="blogResult">
   select
     B.id,
     B.title,
@@ -1864,7 +1885,21 @@ MyBatis 会从结果集中得到每条记录,
           property and there is a column named <i>id</i> in the ResultSet so Author's id will be filled with Blog's id, and that is not 
           what you were expecting. So use the <code>FULL</code> option with caution.
         </p>
-       
+
+        <p>
+          Regardless of the auto-mapping level configured you can enable or disable the automapping for an specific statement
+          by adding the attribute <code>autoMapping</code> to it:
+        </p>
+
+        <source><![CDATA[<select id="selectUsers" resultType="User" autoMapping="false">
+  select
+    user_id             as "id",
+    user_name           as "userName",
+    hashed_password
+  from some_table
+  where id = #{id}
+</select>]]></source>
+              
       </subsection>
       
       <subsection name="缓存">
@@ -1974,7 +2009,6 @@ org.mybatis.cache.Cache 接口。这个接口是 MyBatis 框架中很多复杂�
   boolean hasKey(Object key);
   Object removeObject(Object key);
   void clear();
-  ReadWriteLock getReadWriteLock();
 }]]></source>
 
         <p>

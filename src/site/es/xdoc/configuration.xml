@@ -123,13 +123,15 @@ SqlSessionFactory factory = sqlSessionFactoryBuilder.build(reader, environment, 
               <td>
                 lazyLoadingEnabled
               </td>
-              <td>Habilita o inhabilita globalmente la carga diferida (lazy loading).
+              <td>
+                Habilita o inhabilita globalmente la carga diferida (lazy loading). Cuando está activo, todas las relaciones se cargan en modo diferido.
+                Este valor se puede sobrescribir en cada relación usando el atributo <code>fetchType</code>.
               </td>
               <td>
                 true | false
               </td>
               <td>
-                true
+                false
               </td>
             </tr>
             <tr>
@@ -690,7 +692,7 @@ public class Author {
                 <code>ByteTypeHandler</code>
               </td>
               <td>
-                <code>java.lang.Byte</code>, byte
+                <code>java.lang.Byte</code>, <code>byte</code>
               </td>
               <td>
                 Cualquiera compatible con <code>NUMERIC</code> o <code>BYTE</code>
@@ -734,7 +736,7 @@ public class Author {
                 <code>FloatTypeHandler</code>
               </td>
               <td>
-                <code>java.lang.Float</code>, float
+                <code>java.lang.Float</code>, <code>float</code>
               </td>
               <td>
                 Cualquiera compatible con <code>NUMERIC</code> o <code>FLOAT</code>
@@ -931,8 +933,9 @@ public class Author {
         </table>
         <p>
         Es posible sobrescribir los TypeHanders o crear TypeHanders personalizados para tratar tipos no soportados o no estándares. 
-        Para ello, debes simplemente extender la clase <code>org.apache.ibatis.type.BaseTypeHandler</code> y 
-        opcionalmente mapear tu nuevo TypeHandler a un tipo JDBC. Por ejemplo:
+        Para ello, debes implementar la interfaz <code>org.apache.ibatis.type.TypeHandler</code> o extender 
+        la clase de ayuda <code>org.apache.ibatis.type.BaseTypeHandler</code> y opcionalmente mapear el TypeHandler a un tipo JDBC. 
+        Por ejemplo:
         </p>
 
         <source><![CDATA[// ExampleTypeHandler.java
@@ -983,7 +986,7 @@ public class ExampleTypeHandler extends BaseTypeHandler<String> {
         <p>El tipo JDBC asociado se puede especificar de dos maneras:</p>
         <ul>
           <li>
-           Añadiendo un atributo <code>jdbcType</code> al lemento typeHandler (por ejemplo: <code>jdbcType=VARCHAR</code>).
+           Añadiendo un atributo <code>jdbcType</code> al lemento typeHandler (por ejemplo: <code>jdbcType="VARCHAR"</code>).
           </li>
           <li>Añadiendo una anotación <code>@MappedJdbcTypes</code> a tu clase TypeHandler especificando la lista de tipos JDBC a la que asociarlo. 
 		   Esta anotación será ignorada si se ha especificado también un atributo <code>jdbcType</code>.
@@ -1083,7 +1086,7 @@ public class GenericTypeHandler<E extends MyObject> extends BaseTypeHandler<E> {
 	<select id="getUser" resultMap="usermap">
 		select * from users
 	</select>
-	<insert id="insert" parameterType="org.apache.ibatis.submitted.rounding.User">
+	<insert id="insert">
 	    insert into users (id, name, funkyNumber, roundingMode) values (
 	    	#{id}, #{name}, #{funkyNumber}, #{roundingMode}
 	    )
@@ -1098,7 +1101,7 @@ public class GenericTypeHandler<E extends MyObject> extends BaseTypeHandler<E> {
 	<select id="getUser2" resultMap="usermap2">
 		select * from users2
 	</select>
-	<insert id="insert2" parameterType="org.apache.ibatis.submitted.rounding.User">
+	<insert id="insert2">
 	    insert into users2 (id, name, funkyNumber, roundingMode) values (
 	    	#{id}, #{name}, #{funkyNumber}, #{roundingMode, typeHandler=org.apache.ibatis.type.EnumTypeHandler}
 	    )
@@ -1125,6 +1128,9 @@ public class ExampleObjectFactory extends DefaultObjectFactory {
   }
   public void setProperties(Properties properties) {
     super.setProperties(properties);
+  }
+  public <T> boolean isCollection(Class<T> type) {
+    return Collection.class.isAssignableFrom(type);
   }
 }]]></source>
 
@@ -1348,6 +1354,42 @@ SqlSessionFactory factory = sqlSessionFactoryBuilder.build(reader,properties);]]
         <p>
          Enviará la propiedad “encoding” y el valor “UTF-8” al constructor del InitialContext durante su instanciación.
         </p>
+
+		<p>
+		  You can plug any 3rd party DataSource by implementing the interface <code>org.apache.ibatis.datasource.DataSourceFactory</code>:
+		</p>
+
+        <source><![CDATA[public interface DataSourceFactory {
+  void setProperties(Properties props);
+  DataSource getDataSource();
+}]]></source>
+
+        <p>
+		  The <code>org.apache.ibatis.datasource.unpooled.UnpooledDataSourceFactory</code> puede extenderse para crear nuevos 
+		  adaptadores. Por ejemplo, este es el código necesario para integrar C3P0: 
+		</p>
+
+        <source><![CDATA[import org.apache.ibatis.datasource.unpooled.UnpooledDataSourceFactory;
+import com.mchange.v2.c3p0.ComboPooledDataSource;
+        
+public class C3P0DataSourceFactory extends UnpooledDataSourceFactory {
+
+  public C3P0DataSourceFactory() {
+    this.dataSource = new ComboPooledDataSource();
+  }
+}]]></source>
+
+        <p>Para configurarlo, añade una propiedad por cada método al que quieres que llame MyBatis.
+        A continuación se muestra una configuración de ejemplo para conectar con una base de datos PostgresSQL:</p>        
+
+        <source><![CDATA[<dataSource type="org.myproject.C3P0DataSourceFactory">
+  <property name="driver" value="org.postgresql.Driver"/>
+  <property name="url" value="jdbc:postgresql:mydb"/>
+  <property name="username" value="postgres"/>
+  <property name="password" value="root"/>
+</dataSource>
+]]></source>
+        
       </subsection>
       
       <subsection name="databaseIdProvider">
@@ -1361,24 +1403,24 @@ SqlSessionFactory factory = sqlSessionFactoryBuilder.build(reader,properties);]]
           al fichero mybatis-config.xml file de la siguiente forma:
         </p>
         
-        <source><![CDATA[<databaseIdProvider type="VENDOR" />
+        <source><![CDATA[<databaseIdProvider type="DB_VENDOR" />
 ]]></source>
 
 		<p> 
-		  La implementación VENDOR del databaseIdProvider establece como databaseId el String devuelto por 
+		  La implementación DB_VENDOR del databaseIdProvider establece como databaseId el String devuelto por 
 		  <code>DatabaseMetaData#getDatabaseProductName()</code>. 
 		  Como normalmente este string es demasiado largo, y además, distintas versiones del mismo producto devuelven valores
 		  similares, puedes traducirlo a un valor más corto añadiendo propiedades de la siguente forma:
 		</p>
 		
-        <source><![CDATA[<databaseIdProvider type="VENDOR">
+        <source><![CDATA[<databaseIdProvider type="DB_VENDOR">
   <property name="SQL Server" value="sqlserver"/>
   <property name="DB2" value="db2"/>        
   <property name="Oracle" value="oracle" />
 </databaseIdProvider>]]></source>
 
 		<p> 
-		  Cuando se añaden propiedades, el databaseIdProvider VENDOR devuelve el primer valor que corresponde a la primera clave
+		  Cuando se añaden propiedades, el databaseIdProvider DB_VENDOR devuelve el primer valor que corresponde a la primera clave
 		  encontrada en el nombre devuelto por <code>DatabaseMetaData#getDatabaseProductName()</code> o "null" si no se encuentra ninguna.
 		  En este caso, si <code>getDatabaseProductName()</code> devuelve "Oracle (DataDirect)" el databaseId se informará con "oracle".  
 		</p>
@@ -1389,9 +1431,7 @@ SqlSessionFactory factory = sqlSessionFactoryBuilder.build(reader,properties);]]
 		</p>
 
         <source><![CDATA[public interface DatabaseIdProvider {
-
   void setProperties(Properties p);
-  
   String getDatabaseId(DataSource dataSource) throws SQLException;
 }]]></source>
 

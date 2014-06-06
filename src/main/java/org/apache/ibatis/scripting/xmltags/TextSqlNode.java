@@ -1,5 +1,5 @@
 /*
- *    Copyright 2009-2012 the original author or authors.
+ *    Copyright 2009-2013 the original author or authors.
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -19,17 +19,31 @@ import org.apache.ibatis.parsing.GenericTokenParser;
 import org.apache.ibatis.parsing.TokenHandler;
 import org.apache.ibatis.type.SimpleTypeRegistry;
 
+/**
+ * @author Clinton Begin
+ */
 public class TextSqlNode implements SqlNode {
   private String text;
 
   public TextSqlNode(String text) {
     this.text = text;
   }
+  
+  public boolean isDynamic() {
+    DynamicCheckerTokenParser checker = new DynamicCheckerTokenParser();
+    GenericTokenParser parser = createParser(checker);
+    parser.parse(text);
+    return checker.isDynamic();
+  }
 
   public boolean apply(DynamicContext context) {
-    GenericTokenParser parser = new GenericTokenParser("${", "}", new BindingTokenParser(context));
+    GenericTokenParser parser = createParser(new BindingTokenParser(context));
     context.appendSql(parser.parse(text));
     return true;
+  }
+  
+  private GenericTokenParser createParser(TokenHandler handler) {
+    return new GenericTokenParser("${", "}", handler);
   }
 
   private static class BindingTokenParser implements TokenHandler {
@@ -52,4 +66,18 @@ public class TextSqlNode implements SqlNode {
     }
   }
 
+  private static class DynamicCheckerTokenParser implements TokenHandler {
+    
+    private boolean isDynamic;
+
+    public boolean isDynamic() {
+      return isDynamic;
+    }
+
+    public String handleToken(String content) {
+      this.isDynamic = true;
+      return null;
+    }
+  }
+  
 }

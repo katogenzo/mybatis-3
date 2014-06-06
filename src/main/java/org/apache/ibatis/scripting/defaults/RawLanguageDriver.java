@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2013 MyBatis.org.
+ * Copyright 2012-2014 MyBatis.org.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,37 +15,40 @@
  */
 package org.apache.ibatis.scripting.defaults;
 
-import org.apache.ibatis.executor.parameter.ParameterHandler;
-import org.apache.ibatis.mapping.BoundSql;
-import org.apache.ibatis.mapping.MappedStatement;
+import org.apache.ibatis.builder.BuilderException;
 import org.apache.ibatis.mapping.SqlSource;
 import org.apache.ibatis.parsing.XNode;
-import org.apache.ibatis.scripting.LanguageDriver;
+import org.apache.ibatis.scripting.xmltags.XMLLanguageDriver;
 import org.apache.ibatis.session.Configuration;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 
-public class RawLanguageDriver implements LanguageDriver {
+/**
+ * As of 3.2.4 the default XML language is able to identify static statements
+ * and create a {@link RawSqlSource}. So there is no need to use RAW unless you
+ * want to make sure that there is not any dynamic tag for any reason.
+ * 
+ * @since 3.2.0
+ * @author Eduardo Macarron
+ */
+public class RawLanguageDriver extends XMLLanguageDriver {
 
-  public ParameterHandler createParameterHandler(MappedStatement mappedStatement, Object parameterObject, BoundSql boundSql) {
-    return new DefaultParameterHandler(mappedStatement, parameterObject, boundSql);
-  }
-
+  @Override
   public SqlSource createSqlSource(Configuration configuration, XNode script, Class<?> parameterType) {
-    StringBuilder contents = new StringBuilder();
-    NodeList children = script.getNode().getChildNodes();
-    for (int i = 0; i < children.getLength(); i++) {
-      XNode child = script.newXNode(children.item(i));
-      if (child.getNode().getNodeType() == Node.CDATA_SECTION_NODE || child.getNode().getNodeType() == Node.TEXT_NODE) {
-        String data = child.getStringBody("");
-        contents.append(data);
-      }
-    }
-    return new RawSqlSource(configuration, contents.toString(), parameterType);
+    SqlSource source = super.createSqlSource(configuration, script, parameterType);
+    checkIsNotDynamic(source);
+    return source;
   }
 
+  @Override
   public SqlSource createSqlSource(Configuration configuration, String script, Class<?> parameterType) {
-    return new RawSqlSource(configuration, script, parameterType);
+    SqlSource source = super.createSqlSource(configuration, script, parameterType);
+    checkIsNotDynamic(source);
+    return source;
+  }
+
+  private void checkIsNotDynamic(SqlSource source) {
+    if (!RawSqlSource.class.equals(source.getClass())) {
+      throw new BuilderException("Dynamic content is not allowed when using RAW language");
+    }
   }
 
 }

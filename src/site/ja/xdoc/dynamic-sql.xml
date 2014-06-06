@@ -43,7 +43,7 @@
   <subsection name="if" id="if">
   <p>動的 SQL で最も良く行うのが、次のように条件に応じて where 句に検索条件を追加する処理でしょう。</p>
   <source><![CDATA[<select id="findActiveBlogWithTitleLike" 
-     parameterType="Blog" resultType="Blog">
+     resultType="Blog">
   SELECT * FROM BLOG 
   WHERE state = ‘ACTIVE’ 
   <if test="title != null">
@@ -56,7 +56,7 @@
     ステートメント名を分かりやすいものに変更したら、あとは条件をもう一つ追加するだけです。
   </p>
   <source><![CDATA[<select id="findActiveBlogLike" 
-     parameterType="Blog" resultType="Blog">
+     resultType="Blog">
   SELECT * FROM BLOG WHERE state = ‘ACTIVE’ 
   <if test="title != null">
     AND title like #{title}
@@ -70,7 +70,7 @@
   <p>全ての条件を適用する代わりに、多くの選択肢の中から一つを選んで適用したいという場合があります。</p>
   <p>引き続き上の例を使って、タイトルが指定されたらタイトルのみを条件として検索し、著者が指定されたら著者のみを条件として検索するようにしてみましょう。どちらも指定されなかった場合は注目のブログのみを返すようにしてみましょう（ランダムに選ばれた無意味なリストではなく、管理者が戦略的に選んだリストを返したいという要件があるのでしょう）。</p>
   <source><![CDATA[<select id="findActiveBlogLike" 
-     parameterType="Blog" resultType="Blog">
+     resultType="Blog">
   SELECT * FROM BLOG WHERE state = ‘ACTIVE’
   <choose>
     <when test="title != null">
@@ -88,7 +88,7 @@
   <subsection name="trim, where, set" id="trimWhereSet">
   <p>ここまでの例題は動的 SQL の厄介な問題点を都合よく避けていました。もう一度 if の例に戻って、今度は "ACTIVE = 1" も動的な条件に変更してみましょう。</p>
   <source><![CDATA[<select id="findActiveBlogLike" 
-     parameterType="Blog" resultType="Blog">
+     resultType="Blog">
   SELECT * FROM BLOG 
   WHERE 
   <if test="state != null">
@@ -111,7 +111,7 @@ AND title like ‘someTitle’]]></source>
   <p>これまた構文エラーで失敗するでしょう。動的 SQL の問題は単なる条件分岐だけで解決できるものではありません。自分で書いたことがある方なら、もう二度と書きたくないと思うはずです。</p>
   <p>MyBatis は約 90% のケースをうまく処理できる簡単な解決策を提供します。残りの 10% についても、カスタマイズすることで処理できるようになります。上記の例は、一箇所修正するだけで期待通りに動作するようになります。</p>
   <source><![CDATA[<select id="findActiveBlogLike" 
-     parameterType="Blog" resultType="Blog">
+     resultType="Blog">
   SELECT * FROM BLOG 
   <where> 
     <if test="state != null">
@@ -132,8 +132,7 @@ AND title like ‘someTitle’]]></source>
 </trim>]]></source>  
   <p><em>prefixOverrides</em> 属性にはパイプで区切られたオーバーライド対象の文字列を指定します。ここではスペースにも意味があります。trim 要素の <em>prefixOverrides</em> 属性のリストに含まれる文字列が先頭にあった場合は削除され、<em>prefix</em> 属性で指定された文字列は結果が空でない場合先頭に挿入されます。</p>
   <p>動的な update ステートメントのために同じような要素 <em>set</em> が用意されています。<em>set</em> 要素を使うと、アップデート対象の列を動的に追加することができます。例：</p>
-  <source><![CDATA[<update id="updateAuthorIfNecessary"
-       parameterType="domain.blog.Author">
+  <source><![CDATA[<update id="updateAuthorIfNecessary">
   update Author
     <set>
       <if test="username != null">username=#{username},</if>
@@ -168,7 +167,7 @@ AND title like ‘someTitle’]]></source>
   <subsection name="bind">
   <p><code>bind</code> 要素を使うと、OGNL 式の結果を変数に格納し、その変数を SQL 文中で使用することができます。</p>
   <source><![CDATA[
-<select id="selectBlogsLike" parameterType="Blog" resultType="Blog">
+<select id="selectBlogsLike" resultType="Blog">
   <bind name="pattern" value="'%' + _parameter.getTitle() + '%'" />
   SELECT * FROM BLOG
   WHERE title LIKE #{pattern} 
@@ -176,7 +175,7 @@ AND title like ‘someTitle’]]></source>
   </subsection>
   <subsection name="複数データベースのサポート">
   <p>databaseIdProvider が設定されている場合、条件式で "_databaseId" 変数が利用可能となります。この変数を使うと、実行時のデータベースに応じてステートメントを使い分けることができます。oracle と db2 で異なる select 文を発行する例を次に挙げておきます。</p>
-  <source><![CDATA[<insert id="insert" parameterType="org.myapp.domain.User">
+  <source><![CDATA[<insert id="insert">
   <selectKey keyProperty="id" resultType="int" order="BEFORE">
     <if test="_databaseId == 'oracle'">
       select seq_users.nextval from dual
@@ -191,31 +190,35 @@ AND title like ‘someTitle’]]></source>
   </subsection>
   <subsection name="ダイナミック SQL 記述言語">
     <p>バージョン 3.2 以降、ダイナミック SQL の記述言語が Pluggable になりました。言語ドライバーを記述することで、任意の言語でダイナミック SQL を記述することができます。</p>
-    <p>標準では次の２つの言語が用意されています。</p>
-    <ul>
-    <li>xml</li>
-    <li>raw</li>
-    </ul>
-    <p><code>xml</code> はデフォルトの SQL 記述言語で、これまでのセクションで説明した全ての機能を利用することができます。</p>
-    <p><code>raw</code> というのは、実際には言語を使用しない場合に指定します。この場合、MyBatis がステートメントをデータベースドライバーに渡す前に行うのは引数の置換処理のみです。当然、 <code>xml</code> よりも <code>raw</code> を指定した場合の方が処理は高速です。
-    </p>
-    <p>言語の指定は、ステートメント要素に <code>lang</code> 属性を追加することで行います。
-    </p>
-  <source><![CDATA[<select id="selectBlog" lang="raw">
-  SELECT * FROM BLOG
-</select>]]></source>
-    <p>Mapper インターフェイスを使っている場合は <code>@Lang</code> アノテーションを使います。</p>
-  <source><![CDATA[public interface Mapper {
-  @Lang(RawLanguageDriver.class)
-  @Select("SELECT * FROM BLOG")
-  List<Blog> selectBlog();
-}]]></source>
-    <p>LanguageDriver インターフェイスを実装することで、カスタムの言語ドライバーを作成することもできます。</p>
-  <source><![CDATA[public interface LanguageDriver {
+    <p>カスタムの言語ドライバーを使用する場合、まずは LanguageDriver インターフェイスを実装したクラスを作成します。</p>
+    <source><![CDATA[public interface LanguageDriver {
   ParameterHandler createParameterHandler(MappedStatement mappedStatement, Object parameterObject, BoundSql boundSql);
   SqlSource createSqlSource(Configuration configuration, XNode script, Class<?> parameterType);
   SqlSource createSqlSource(Configuration configuration, String script, Class<?> parameterType);
 }]]></source>    
+    <p>作成した言語ドライバーをデフォルトとして使用する場合は、mybatis-config.xml に次のような設定を追加します（typeAlias の使用は必須ではありません）。</p>
+    <source><![CDATA[<typeAliases>
+  <typeAlias type="org.sample.MyLanguageDriver" alias="myLanguage"/>
+</typeAliases>
+<settings>
+  <setting name="defaultScriptingLanguage" value="myLanguage"/>
+</settings>
+]]></source>
+    <p><code>lang</code> 属性を指定することで、特定のステートメントの言語ドライバーのみを変更することもできます。</p>
+    <source><![CDATA[<select id="selectBlog" lang="myLanguage">
+  SELECT * FROM BLOG
+</select>]]></source>
+    <p>Mapper インターフェイスを使っている場合は <code>@Lang</code> アノテーションを使います。</p>
+    <source><![CDATA[public interface Mapper {
+  @Lang(MyLanguageDriver.class)
+  @Select("SELECT * FROM BLOG")
+  List<Blog> selectBlog();
+}]]></source>
+
+    <p><span class="label important">NOTE</span> Apache Velocity を使ってダイナミック SQL を記述することができます。MyBatis-Velocity プロジェクトを参照してください。</p>
+
+    <p>これまでのセクションで出てきた XML タグは、全てデフォルトの言語ドライバー <code>org.apache.ibatis.scripting.xmltags.XmlLanguageDriver</code> （エイリアスは <code>xml</code> ）によって提供されているものです。</p>
+
 	</subsection>
 	</section>
   </body>

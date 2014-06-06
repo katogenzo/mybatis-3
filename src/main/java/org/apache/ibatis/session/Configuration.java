@@ -1,5 +1,5 @@
 /*
- *    Copyright 2009-2013 the original author or authors.
+ *    Copyright 2009-2014 the original author or authors.
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -87,6 +87,9 @@ import org.apache.ibatis.type.JdbcType;
 import org.apache.ibatis.type.TypeAliasRegistry;
 import org.apache.ibatis.type.TypeHandlerRegistry;
 
+/**
+ * @author Clinton Begin
+ */
 public class Configuration {
 
   protected Environment environment;
@@ -160,6 +163,7 @@ public class Configuration {
   public Configuration() {
     typeAliasRegistry.registerAlias("JDBC", JdbcTransactionFactory.class);
     typeAliasRegistry.registerAlias("MANAGED", ManagedTransactionFactory.class);
+
     typeAliasRegistry.registerAlias("JNDI", JndiDataSourceFactory.class);
     typeAliasRegistry.registerAlias("POOLED", PooledDataSourceFactory.class);
     typeAliasRegistry.registerAlias("UNPOOLED", UnpooledDataSourceFactory.class);
@@ -170,7 +174,7 @@ public class Configuration {
     typeAliasRegistry.registerAlias("SOFT", SoftCache.class);
     typeAliasRegistry.registerAlias("WEAK", WeakCache.class);
 
-    typeAliasRegistry.registerAlias("VENDOR", VendorDatabaseIdProvider.class);
+    typeAliasRegistry.registerAlias("DB_VENDOR", VendorDatabaseIdProvider.class);
 
     typeAliasRegistry.registerAlias("XML", XMLLanguageDriver.class);
     typeAliasRegistry.registerAlias("RAW", RawLanguageDriver.class);
@@ -287,13 +291,14 @@ public class Configuration {
   }
 
   public void setLazyLoadingEnabled(boolean lazyLoadingEnabled) {
-    if (lazyLoadingEnabled && this.proxyFactory == null) {
-      this.proxyFactory = new CglibProxyFactory();
-    }
     this.lazyLoadingEnabled = lazyLoadingEnabled;
   }
 
   public ProxyFactory getProxyFactory() {
+    if (proxyFactory == null) {
+      // makes sure CGLIB is not needed unless explicitly requested
+      proxyFactory = new CglibProxyFactory();
+    }
     return proxyFactory;
   }
 
@@ -470,10 +475,6 @@ public class Configuration {
   }
 
   public Executor newExecutor(Transaction transaction, ExecutorType executorType) {
-    return newExecutor(transaction, executorType, false);
-  }
-
-  public Executor newExecutor(Transaction transaction, ExecutorType executorType, boolean autoCommit) {
     executorType = executorType == null ? defaultExecutorType : executorType;
     executorType = executorType == null ? ExecutorType.SIMPLE : executorType;
     Executor executor;
@@ -485,7 +486,7 @@ public class Configuration {
       executor = new SimpleExecutor(this, transaction);
     }
     if (cacheEnabled) {
-      executor = new CachingExecutor(executor, autoCommit);
+      executor = new CachingExecutor(executor);
     }
     executor = (Executor) interceptorChain.pluginAll(executor);
     return executor;
@@ -695,6 +696,12 @@ public class Configuration {
       synchronized (incompleteStatements) {
         // This always throws a BuilderException.
         incompleteStatements.iterator().next().parseStatementNode();
+      }
+    }
+    if (!incompleteMethods.isEmpty()) {
+      synchronized (incompleteMethods) {
+        // This always throws a BuilderException.
+        incompleteMethods.iterator().next().resolve();
       }
     }
   }

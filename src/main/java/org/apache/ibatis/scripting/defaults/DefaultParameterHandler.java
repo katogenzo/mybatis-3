@@ -31,6 +31,10 @@ import org.apache.ibatis.type.JdbcType;
 import org.apache.ibatis.type.TypeHandler;
 import org.apache.ibatis.type.TypeHandlerRegistry;
 
+/**
+ * @author Clinton Begin
+ * @author Eduardo Macarron
+ */
 public class DefaultParameterHandler implements ParameterHandler {
 
   private final TypeHandlerRegistry typeHandlerRegistry;
@@ -56,7 +60,6 @@ public class DefaultParameterHandler implements ParameterHandler {
     ErrorContext.instance().activity("setting parameters").object(mappedStatement.getParameterMap().getId());
     List<ParameterMapping> parameterMappings = boundSql.getParameterMappings();
     if (parameterMappings != null) {
-      MetaObject metaObject = parameterObject == null ? null : configuration.newMetaObject(parameterObject);
       for (int i = 0; i < parameterMappings.size(); i++) {
         ParameterMapping parameterMapping = parameterMappings.get(i);
         if (parameterMapping.getMode() != ParameterMode.OUT) {
@@ -69,7 +72,8 @@ public class DefaultParameterHandler implements ParameterHandler {
           } else if (typeHandlerRegistry.hasTypeHandler(parameterObject.getClass())) {
             value = parameterObject;
           } else {
-            value = metaObject == null ? null : metaObject.getValue(propertyName);
+            MetaObject metaObject = configuration.newMetaObject(parameterObject);
+            value = metaObject.getValue(propertyName);
           }
           TypeHandler typeHandler = parameterMapping.getTypeHandler();
           JdbcType jdbcType = parameterMapping.getJdbcType();

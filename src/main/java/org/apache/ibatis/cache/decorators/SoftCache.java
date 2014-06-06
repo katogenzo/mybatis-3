@@ -1,5 +1,5 @@
 /*
- *    Copyright 2009-2012 the original author or authors.
+ *    Copyright 2009-2014 the original author or authors.
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -25,6 +25,8 @@ import org.apache.ibatis.cache.Cache;
 /**
  * Soft Reference cache decorator
  * Thanks to Dr. Heinz Kabutz for his guidance here.
+ *
+ * @author Clinton Begin
  */
 public class SoftCache implements Cache {
   private final LinkedList<Object> hardLinksToAvoidGarbageCollection;
@@ -39,24 +41,29 @@ public class SoftCache implements Cache {
     this.queueOfGarbageCollectedEntries = new ReferenceQueue<Object>();
   }
 
+  @Override
   public String getId() {
     return delegate.getId();
   }
 
+  @Override
   public int getSize() {
     removeGarbageCollectedItems();
     return delegate.getSize();
   }
 
+
   public void setSize(int size) {
     this.numberOfHardLinks = size;
   }
 
+  @Override
   public void putObject(Object key, Object value) {
     removeGarbageCollectedItems();
     delegate.putObject(key, new SoftEntry(key, value, queueOfGarbageCollectedEntries));
   }
 
+  @Override
   public Object getObject(Object key) {
     Object result = null;
     @SuppressWarnings("unchecked") // assumed delegate cache is totally managed by this cache
@@ -78,11 +85,13 @@ public class SoftCache implements Cache {
     return result;
   }
 
+  @Override
   public Object removeObject(Object key) {
     removeGarbageCollectedItems();
     return delegate.removeObject(key);
   }
 
+  @Override
   public void clear() {
     synchronized (hardLinksToAvoidGarbageCollection) {
       hardLinksToAvoidGarbageCollection.clear();
@@ -91,8 +100,9 @@ public class SoftCache implements Cache {
     delegate.clear();
   }
 
+  @Override
   public ReadWriteLock getReadWriteLock() {
-    return delegate.getReadWriteLock();
+    return null;
   }
 
   private void removeGarbageCollectedItems() {

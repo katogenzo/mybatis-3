@@ -158,7 +158,8 @@ ps.setInt(1,id);]]></source>
             <tr>
               <td><code>parameterType</code></td>
               <td>The fully qualified class name or alias for the parameter that will be passed into this
-                statement.
+                statement. This attribute is optional because MyBatis can calculate the TypeHandler to use out of 
+                the actual parameter passed to the statement. Default is <code>unset</code>.
               </td>
             </tr>
             <tr>
@@ -293,7 +294,8 @@ ps.setInt(1,id);]]></source>
             <tr>
               <td><code>parameterType</code></td>
               <td>The fully qualified class name or alias for the parameter that will be passed into this
-                statement.
+                statement. This attribute is optional because MyBatis can calculate the TypeHandler to use out of 
+                the actual parameter passed to the statement. Default is <code>unset</code>.
               </td>
             </tr>
             <tr>
@@ -327,23 +329,25 @@ ps.setInt(1,id);]]></source>
             </tr>
             <tr>
               <td><code>useGeneratedKeys</code></td>
-              <td>(insert only) This tells MyBatis to use the JDBC <code>getGeneratedKeys</code> method to retrieve
+              <td>(insert and update only) This tells MyBatis to use the JDBC <code>getGeneratedKeys</code> method to retrieve
                 keys generated internally by the database (e.g. auto increment fields in RDBMS like
                 MySQL or SQL Server). Default: <code>false</code>
               </td>
             </tr>
             <tr>
               <td><code>keyProperty</code></td>
-              <td>(insert only) Identifies a property into which MyBatis will set the key value returned
+              <td>(insert and update only) Identifies a property into which MyBatis will set the key value returned
                 by <code>getGeneratedKeys</code>, or by a <code>selectKey</code> child element of the insert statement.
-                Default: <code>unset</code>.
+                Default: <code>unset</code>.  Can be a comma separated list of property names if multiple
+                generated columns are expected.
               </td>
             </tr>
             <tr>
               <td><code>keyColumn</code></td>
-              <td>(insert only) Sets the name of the column in the table with a generated key. This is
+              <td>(insert and update only) Sets the name of the column in the table with a generated key. This is
                 only required in certain databases (like PostgreSQL) when the key column is not the
-                first column in the table.
+                first column in the table. Can be a comma separated list of columns names if multiple
+                generated columns are expected.
               </td>
             </tr>
             <tr>
@@ -358,12 +362,12 @@ ps.setInt(1,id);]]></source>
 
         <p>The following are some examples of insert, update and delete statements.</p>
 
-        <source><![CDATA[<insert id="insertAuthor" parameterType="domain.blog.Author">
+        <source><![CDATA[<insert id="insertAuthor">
   insert into Author (id,username,password,email,bio)
   values (#{id},#{username},#{password},#{email},#{bio})
 </insert>
 
-<update id="updateAuthor" parameterType="domain.blog.Author">
+<update id="updateAuthor">
   update Author set
     username = #{username},
     password = #{password},
@@ -372,7 +376,7 @@ ps.setInt(1,id);]]></source>
   where id = #{id}
 </update>
 
-<delete id="deleteAuthor" parameterType="int">
+<delete id="deleteAuthor">
   delete from Author where id = #{id}
 </delete>]]></source>
 
@@ -388,7 +392,7 @@ ps.setInt(1,id);]]></source>
           for the id, the statement would be modified as follows:
         </p>
 
-        <source><![CDATA[<insert id="insertAuthor" parameterType="domain.blog.Author" useGeneratedKeys="true"
+        <source><![CDATA[<insert id="insertAuthor" useGeneratedKeys="true"
     keyProperty="id">
   insert into Author (username,password,email,bio)
   values (#{username},#{password},#{email},#{bio})
@@ -403,7 +407,7 @@ ps.setInt(1,id);]]></source>
           Here's a simple (silly) example that would generate a random ID (something you'd likely never do,
           but this demonstrates the flexibility and how MyBatis really doesn't mind):
         </p>
-        <source><![CDATA[<insert id="insertAuthor" parameterType="domain.blog.Author">
+        <source><![CDATA[<insert id="insertAuthor">
   <selectKey keyProperty="id" resultType="int" order="BEFORE">
     select CAST(RANDOM()*1000000 as INTEGER) a from SYSIBM.SYSDUMMY1
   </selectKey>
@@ -437,14 +441,25 @@ ps.setInt(1,id);]]></source>
           <tbody>
             <tr>
               <td><code>keyProperty</code></td>
-              <td>The target property where the result of the <code>selectKey</code> statement should be set.</td>
+              <td>The target property where the result of the <code>selectKey</code> statement should be set.
+                Can be a comma separated list of property names if multiple generated columns
+                are expected.
+              </td>
+            </tr>
+            <tr>
+              <td><code>keyColumn</code></td>
+              <td>The column name(s) in the returned result set that match the properties.
+                Can be a comma separated list of column names if multiple generated columns
+                are expected.
+              </td>
             </tr>
             <tr>
               <td><code>resultType</code></td>
               <td>
                 The type of the result. MyBatis can usually figure this out, but it doesn't hurt to
                 add it to be sure. MyBatis allows any simple type to be used as the key,
-                including Strings.
+                including Strings.  If you are expecting multiple generated columns, then
+                you can use an Object that contains the expected properties, or a Map.
               </td>
             </tr>
             <tr>
@@ -479,7 +494,7 @@ ps.setInt(1,id);]]></source>
           The SQL fragment can then be included in another statement, for example:
         </p>
 
-        <source><![CDATA[<select id="selectUsers" parameterType="int" resultType="hashmap">
+        <source><![CDATA[<select id="selectUsers" resultType="map">
   select <include refid="userColumns"/>
   from some_table
   where id = #{id}
@@ -493,7 +508,7 @@ ps.setInt(1,id);]]></source>
           too them, for example:
         </p>
 
-        <source><![CDATA[<select id="selectUsers" parameterType="int" resultType="User">
+        <source><![CDATA[<select id="selectUsers" resultType="User">
   select id, username, password
   from users
   where id = #{id}
@@ -507,7 +522,7 @@ ps.setInt(1,id);]]></source>
           different. For example:
         </p>
 
-        <source><![CDATA[<insert id="insertUser" parameterType="User" >
+        <source><![CDATA[<insert id="insertUser" parameterType="User">
   insert into users (id, username, password)
   values (#{id}, #{username}, #{password})
 </insert>]]></source>
@@ -626,7 +641,7 @@ ps.setInt(1,id);]]></source>
           example:
         </p>
 
-        <source><![CDATA[<select id="selectUsers" parameterType="int" resultType="hashmap">
+        <source><![CDATA[<select id="selectUsers" resultType="map">
   select id, username, hashedPassword
   from some_table
   where id = #{id}
@@ -673,7 +688,7 @@ public class User {
           Such a JavaBean could be mapped to a <code>ResultSet</code> just as easily as the <code>HashMap</code>.
         </p>
 
-        <source><![CDATA[<select id="selectUsers" parameterType="int" resultType="com.someapp.model.User">
+        <source><![CDATA[<select id="selectUsers" resultType="com.someapp.model.User">
   select id, username, hashedPassword
   from some_table
   where id = #{id}
@@ -688,7 +703,7 @@ public class User {
 <typeAlias type="com.someapp.model.User" alias="User"/>
 
 <!-- In SQL Mapping XML file -->
-<select id="selectUsers" parameterType="int" resultType="User">
+<select id="selectUsers" resultType="User">
   select id, username, hashedPassword
   from some_table
   where id = #{id}
@@ -702,7 +717,7 @@ public class User {
           example:
         </p>
 
-        <source><![CDATA[<select id="selectUsers" parameterType="int" resultType="User">
+        <source><![CDATA[<select id="selectUsers" resultType="User">
   select
     user_id             as "id",
     user_name           as "userName",
@@ -729,7 +744,7 @@ public class User {
           <code>resultType</code> attribute). For example:
         </p>
 
-        <source><![CDATA[<select id="selectUsers" parameterType="int" resultMap="userResultMap">
+        <source><![CDATA[<select id="selectUsers" resultMap="userResultMap">
   select user_id, user_name, hashed_password
   from some_table
   where id = #{id}
@@ -751,7 +766,7 @@ public class User {
         <p>For example, how would we map this statement?</p>
 
         <source><![CDATA[<!-- Very Complex Statement -->
-<select id="selectBlogDetails" parameterType="int" resultMap="detailedBlogResultMap">
+<select id="selectBlogDetails" resultMap="detailedBlogResultMap">
   select
        B.id as blog_id,
        B.title as blog_title,
@@ -1269,6 +1284,13 @@ public class User {
                 select statement.
               </td>
             </tr>
+            <tr>
+              <td><code>fetchType</code></td>
+              <td>
+                Optional. Valid values are <code>lazy</code> and <code>eager</code>. If present, it supersedes
+                the global configuration parameter <code>lazyLoadingEnabled</code> for this mapping.
+              </td>
+            </tr>
           </tbody>
         </table>
 
@@ -1280,11 +1302,11 @@ public class User {
   <association property="author" column="author_id" javaType="Author" select="selectAuthor"/>
 </resultMap>
 
-<select id="selectBlog" parameterType="int" resultMap="blogResult">
+<select id="selectBlog" resultMap="blogResult">
   SELECT * FROM BLOG WHERE ID = #{id}
 </select>
 
-<select id="selectAuthor" parameterType="int" resultType="Author">
+<select id="selectAuthor" resultType="Author">
   SELECT * FROM AUTHOR WHERE ID = #{id}
 </select>]]></source>
 
@@ -1364,6 +1386,13 @@ public class User {
                 specified using a comma as a separator. Default value: unset.
               </td>
             </tr>                        
+            <tr>
+              <td><code>autoMapping</code></td>
+              <td>If present, MyBatis will enable or disable automapping when mapping the result to this property.
+                This attribute overrides the global autoMappingBehavior.
+                Note that it has no effect on an external resultMap, so it is pointless to use it with <code>select</code> or <code>resultMap</code> attribute. Default value: unset.
+              </td>
+            </tr>
           </tbody>
         </table>
 
@@ -1373,7 +1402,7 @@ public class User {
           the Blog and Author tables together, like so:
         </p>
 
-        <source><![CDATA[<select id="selectBlog" parameterType="int" resultMap="blogResult">
+        <source><![CDATA[<select id="selectBlog" resultMap="blogResult">
   select
     B.id            as blog_id,
     B.title         as blog_title,
@@ -1444,7 +1473,7 @@ public class User {
           The select statement would look like:
         </p>
 
-        <source><![CDATA[<select id="selectBlog" parameterType="int" resultMap="blogResult">
+        <source><![CDATA[<select id="selectBlog" resultMap="blogResult">
   select
     B.id            as blog_id,
     B.title         as blog_title,
@@ -1601,11 +1630,11 @@ SELECT * FROM AUTHOR WHERE ID = #{id}]]></source>
   <collection property="posts" javaType="ArrayList" column="id" ofType="Post" select="selectPostsForBlog"/>
 </resultMap>
 
-<select id="selectBlog" parameterType="int" resultMap="blogResult">
+<select id="selectBlog" resultMap="blogResult">
   SELECT * FROM BLOG WHERE ID = #{id}
 </select>
 
-<select id="selectPostsForBlog" parameterType="int" resultType="Post">
+<select id="selectPostsForBlog" resultType="Post">
   SELECT * FROM POST WHERE BLOG_ID = #{id}
 </select>]]></source>
 
@@ -1639,7 +1668,7 @@ SELECT * FROM AUTHOR WHERE ID = #{id}]]></source>
 
         <p>First, let's look at the SQL:</p>
 
-        <source><![CDATA[<select id="selectBlog" parameterType="int" resultMap="blogResult">
+        <source><![CDATA[<select id="selectBlog" resultMap="blogResult">
   select
   B.id as blog_id,
   B.title as blog_title,
@@ -1702,7 +1731,7 @@ SELECT * FROM POST WHERE BLOG_ID = #{id}]]></source>
         <p>A name must be given to each result set by adding a 
         <code>resultSets</code> attribute to the mapped statement with a list of names separated by commas.</p>
 
-        <source><![CDATA[<select id="selectBlog" resultSets="blogs,posts" parameterType="int" resultMap="blogResult">
+        <source><![CDATA[<select id="selectBlog" resultSets="blogs,posts" resultMap="blogResult">
   {call getBlogsAndPosts(#{id,jdbcType=INTEGER,mode=IN})}
 </select>]]></source>
         
@@ -1858,7 +1887,7 @@ SELECT * FROM POST WHERE BLOG_ID = #{id}]]></source>
           ResultSet that have not a manual mapping will be auto-mapped, then manual mappings will be processed. 
           In the following sample <i>id</i> and <i>userName</i> columns will be auto-mapped and <i>hashed_password</i> column will be mapped.</p>
 
-        <source><![CDATA[<select id="selectUsers" parameterType="int" resultType="User">
+        <source><![CDATA[<select id="selectUsers" resultType="User">
   select
     user_id             as "id",
     user_name           as "userName",
@@ -1893,7 +1922,7 @@ SELECT * FROM POST WHERE BLOG_ID = #{id}]]></source>
           hence this may result in undesired mappings. To understand the risk have a look at the following sample:
         </p>
         
-        <source><![CDATA[<select id="selectBlog" parameterType="int" resultMap="blogResult">
+        <source><![CDATA[<select id="selectBlog" resultMap="blogResult">
   select
     B.id,
     B.title,
@@ -1915,11 +1944,25 @@ SELECT * FROM POST WHERE BLOG_ID = #{id}]]></source>
           property and there is a column named <i>id</i> in the ResultSet so Author's id will be filled with Blog's id, and that is not 
           what you were expecting. So use the <code>FULL</code> option with caution.
         </p>
+
+        <p>
+          Regardless of the auto-mapping level configured you can enable or disable the automapping for an specific statement
+          by adding the attribute <code>autoMapping</code> to it:
+        </p>
+
+        <source><![CDATA[<select id="selectUsers" resultType="User" autoMapping="false">
+  select
+    user_id             as "id",
+    user_name           as "userName",
+    hashed_password
+  from some_table
+  where id = #{id}
+</select>]]></source>
        
       </subsection>
       <subsection name="cache">
         <p>
-          MyBatis has includes a powerful transactional query caching feature which is very configurable and customizable. 
+          MyBatis includes a powerful transactional query caching feature which is very configurable and customizable. 
           A lot of changes have been made in the MyBatis 3 cache implementation to make it both more powerful and far easier to configure.
         </p>
 
@@ -2036,11 +2079,7 @@ SELECT * FROM POST WHERE BLOG_ID = #{id}]]></source>
   boolean hasKey(Object key);
   Object removeObject(Object key);
   void clear();
-  ReadWriteLock getReadWriteLock();
 }]]></source>
-
-        <p>Follows below 
-        </p>
 
         <p>
           To configure your cache, simply add public JavaBeans properties to your Cache implementation, and
@@ -2053,6 +2092,11 @@ SELECT * FROM POST WHERE BLOG_ID = #{id}]]></source>
 </cache>]]></source>
 
         <p>You can use JavaBeans properties of all simple types, MyBatis will do the conversion.</p>
+
+        <p><span class="label important">NOTE</span>
+          Settings of cache (like eviction strategy, read write..etc.) in section above are not applied
+          when using Custom Cache.
+        </p>
 
         <p>
           It's important to remember that a cache configuration and the cache instance are bound to the

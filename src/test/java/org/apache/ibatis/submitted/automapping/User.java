@@ -15,10 +15,13 @@
  */
 package org.apache.ibatis.submitted.automapping;
 
+import java.util.List;
+
 public class User {
 
   private Integer id;
   private String name;
+  private List<Pet> pets;
 
   public Integer getId() {
     return id;
@@ -34,5 +37,13 @@ public class User {
 
   public void setName(String name) {
     this.name = name;
+  }
+
+  public List<Pet> getPets() {
+    return pets;
+  }
+
+  public void setPets(List<Pet> pets) {
+    this.pets = pets;
   }
 }

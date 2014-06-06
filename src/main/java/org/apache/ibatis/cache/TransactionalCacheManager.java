@@ -20,6 +20,9 @@ import java.util.Map;
 
 import org.apache.ibatis.cache.decorators.TransactionalCache;
 
+/**
+ * @author Clinton Begin
+ */
 public class TransactionalCacheManager {
 
   private Map<Cache, TransactionalCache> transactionalCaches = new HashMap<Cache, TransactionalCache>();
@@ -28,6 +31,10 @@ public class TransactionalCacheManager {
     getTransactionalCache(cache).clear();
   }
 
+  public Object getObject(Cache cache, CacheKey key) {
+    return getTransactionalCache(cache).getObject(key);
+  }
+  
   public void putObject(Cache cache, CacheKey key, Object value) {
     getTransactionalCache(cache).putObject(key, value);
   }

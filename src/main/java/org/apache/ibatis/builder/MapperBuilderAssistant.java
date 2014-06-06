@@ -1,5 +1,5 @@
 /*
- *    Copyright 2009-2013 the original author or authors.
+ *    Copyright 2009-2014 the original author or authors.
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -49,6 +49,9 @@ import org.apache.ibatis.session.Configuration;
 import org.apache.ibatis.type.JdbcType;
 import org.apache.ibatis.type.TypeHandler;
 
+/**
+ * @author Clinton Begin
+ */
 public class MapperBuilderAssistant extends BaseBuilder {
 
   private String currentNamespace;
@@ -205,37 +208,6 @@ public class MapperBuilderAssistant extends BaseBuilder {
     return resultMap;
   }
 
-  public ResultMapping buildResultMapping(
-      Class<?> resultType,
-      String property,
-      String column,
-      Class<?> javaType,
-      JdbcType jdbcType,
-      String nestedSelect,
-      String nestedResultMap,
-      String notNullColumn,
-      String columnPrefix,
-      Class<? extends TypeHandler<?>> typeHandler,
-      List<ResultFlag> flags,
-      String resultSet,
-      String foreignColumn) {
-    ResultMapping resultMapping = assembleResultMapping(
-        resultType,
-        property,
-        column,
-        javaType,
-        jdbcType,
-        nestedSelect,
-        nestedResultMap,
-        notNullColumn,
-        columnPrefix,
-        typeHandler,
-        flags,
-        resultSet,
-        foreignColumn);
-    return resultMapping;
-  }
-
   public Discriminator buildDiscriminator(
       Class<?> resultType,
       String column,
@@ -243,7 +215,7 @@ public class MapperBuilderAssistant extends BaseBuilder {
       JdbcType jdbcType,
       Class<? extends TypeHandler<?>> typeHandler,
       Map<String, String> discriminatorMap) {
-    ResultMapping resultMapping = assembleResultMapping(
+    ResultMapping resultMapping = buildResultMapping(
         resultType,
         null,
         column,
@@ -256,7 +228,8 @@ public class MapperBuilderAssistant extends BaseBuilder {
         typeHandler,
         new ArrayList<ResultFlag>(),
         null,
-        null);
+        null,
+        false);
     Map<String, String> namespaceDiscriminatorMap = new HashMap<String, String>();
     for (Map.Entry<String, String> e : discriminatorMap.entrySet()) {
       String resultMap = e.getValue();
@@ -394,7 +367,7 @@ public class MapperBuilderAssistant extends BaseBuilder {
     statementBuilder.timeout(timeout);
   }
 
-  private ResultMapping assembleResultMapping(
+  public ResultMapping buildResultMapping(
       Class<?> resultType,
       String property,
       String column,
@@ -407,7 +380,8 @@ public class MapperBuilderAssistant extends BaseBuilder {
       Class<? extends TypeHandler<?>> typeHandler,
       List<ResultFlag> flags,
       String resultSet,
-      String foreignColumn) {
+      String foreignColumn, 
+      boolean lazy) {
     Class<?> javaTypeClass = resolveResultJavaType(resultType, property, javaType);
     TypeHandler<?> typeHandlerInstance = resolveTypeHandler(javaTypeClass, typeHandler);
     List<ResultMapping> composites = parseCompositeColumnName(column);
@@ -423,6 +397,7 @@ public class MapperBuilderAssistant extends BaseBuilder {
     builder.notNullColumns(parseMultipleColumnNames(notNullColumn));
     builder.columnPrefix(columnPrefix);
     builder.foreignColumn(foreignColumn);
+    builder.lazy(lazy);
     return builder.build();
   }
 
@@ -503,35 +478,44 @@ public class MapperBuilderAssistant extends BaseBuilder {
       List<ResultFlag> flags) {
       return buildResultMapping(
         resultType, property, column, javaType, jdbcType, nestedSelect, 
-        nestedResultMap, notNullColumn, columnPrefix, typeHandler, flags, null, null);
+        nestedResultMap, notNullColumn, columnPrefix, typeHandler, flags, null, null, configuration.isLazyLoadingEnabled());
   }  
-  
-  /** Backward compatibility signature */
-    public MappedStatement addMappedStatement(
-      String id,
-      SqlSource sqlSource,
-      StatementType statementType,
-      SqlCommandType sqlCommandType,
-      Integer fetchSize,
-      Integer timeout,
-      String parameterMap,
-      Class<?> parameterType,
-      String resultMap,
-      Class<?> resultType,
-      ResultSetType resultSetType,
-      boolean flushCache,
-      boolean useCache,
-      boolean resultOrdered,
-      KeyGenerator keyGenerator,
-      String keyProperty,
-      String keyColumn,
-      String databaseId,
-      LanguageDriver lang) {
-      return addMappedStatement(
-        id, sqlSource, statementType, sqlCommandType, fetchSize, timeout, 
-        parameterMap, parameterType, resultMap, resultType, resultSetType, 
-        flushCache, useCache, resultOrdered, keyGenerator, keyProperty, 
-        keyColumn, databaseId, lang, null);
+
+  public LanguageDriver getLanguageDriver(Class<?> langClass) {
+    if (langClass != null) {
+      configuration.getLanguageRegistry().register(langClass);
+    } else {
+      langClass = configuration.getLanguageRegistry().getDefaultDriverClass();
     }
+    return configuration.getLanguageRegistry().getDriver(langClass);
+  }
+
+  /** Backward compatibility signature */
+  public MappedStatement addMappedStatement(
+    String id,
+    SqlSource sqlSource,
+    StatementType statementType,
+    SqlCommandType sqlCommandType,
+    Integer fetchSize,
+    Integer timeout,
+    String parameterMap,
+    Class<?> parameterType,
+    String resultMap,
+    Class<?> resultType,
+    ResultSetType resultSetType,
+    boolean flushCache,
+    boolean useCache,
+    boolean resultOrdered,
+    KeyGenerator keyGenerator,
+    String keyProperty,
+    String keyColumn,
+    String databaseId,
+    LanguageDriver lang) {
+    return addMappedStatement(
+      id, sqlSource, statementType, sqlCommandType, fetchSize, timeout, 
+      parameterMap, parameterType, resultMap, resultType, resultSetType, 
+      flushCache, useCache, resultOrdered, keyGenerator, keyProperty, 
+      keyColumn, databaseId, lang, null);
+  }
 
 }

@@ -1,5 +1,5 @@
 /*
- *    Copyright 2009-2012 the original author or authors.
+ *    Copyright 2009-2013 the original author or authors.
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -34,6 +34,9 @@ import org.apache.ibatis.session.RowBounds;
 import org.apache.ibatis.transaction.Transaction;
 import org.apache.ibatis.transaction.TransactionFactory;
 
+/**
+ * @author Clinton Begin
+ */
 public class ResultLoader {
 
   protected final Configuration configuration;
@@ -45,6 +48,7 @@ public class ResultLoader {
   protected final CacheKey cacheKey;
   protected final BoundSql boundSql;
   protected final ResultExtractor resultExtractor;
+  protected final long creatorThreadId;
   
   protected boolean loaded;
   protected Object resultObject;
@@ -59,6 +63,7 @@ public class ResultLoader {
     this.cacheKey = cacheKey;
     this.boundSql = boundSql;
     this.resultExtractor = new ResultExtractor(configuration, objectFactory);
+    this.creatorThreadId = Thread.currentThread().getId();
   }
 
   public Object loadResult() throws SQLException {
@@ -69,7 +74,7 @@ public class ResultLoader {
 
   private <E> List<E> selectList() throws SQLException {
     Executor localExecutor = executor;
-    if (localExecutor.isClosed()) {
+    if (Thread.currentThread().getId() != this.creatorThreadId || localExecutor.isClosed()) {
       localExecutor = newExecutor();
     }
     try {

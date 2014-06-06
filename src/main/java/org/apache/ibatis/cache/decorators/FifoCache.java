@@ -1,5 +1,5 @@
 /*
- *    Copyright 2009-2012 the original author or authors.
+ *    Copyright 2009-2014 the original author or authors.
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -20,13 +20,15 @@ import java.util.concurrent.locks.ReadWriteLock;
 
 import org.apache.ibatis.cache.Cache;
 
-/*
+/**
  * FIFO (first in, first out) cache decorator
+ *
+ * @author Clinton Begin
  */
 public class FifoCache implements Cache {
 
   private final Cache delegate;
-  private final LinkedList<Object> keyList;
+  private LinkedList<Object> keyList;
   private int size;
 
   public FifoCache(Cache delegate) {
@@ -35,10 +37,12 @@ public class FifoCache implements Cache {
     this.size = 1024;
   }
 
+  @Override
   public String getId() {
     return delegate.getId();
   }
 
+  @Override
   public int getSize() {
     return delegate.getSize();
   }
@@ -47,26 +51,31 @@ public class FifoCache implements Cache {
     this.size = size;
   }
 
+  @Override
   public void putObject(Object key, Object value) {
     cycleKeyList(key);
     delegate.putObject(key, value);
   }
 
+  @Override
   public Object getObject(Object key) {
     return delegate.getObject(key);
   }
 
+  @Override
   public Object removeObject(Object key) {
     return delegate.removeObject(key);
   }
 
+  @Override
   public void clear() {
     delegate.clear();
     keyList.clear();
   }
 
+  @Override
   public ReadWriteLock getReadWriteLock() {
-    return delegate.getReadWriteLock();
+    return null;
   }
 
   private void cycleKeyList(Object key) {
